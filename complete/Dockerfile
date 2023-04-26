@@ -1,17 +1,21 @@
 # First stage: complete build environment
-FROM openjdk:11-slim-buster as build   
+FROM ubuntu:20.04 AS MAVEN_BUILD
 
-COPY .mvn .mvn                                               
-COPY mvnw .                                                  
-COPY pom.xml .                                               
-COPY src src                                                 
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -y && apt-get install -y maven
 
-RUN ./mvnw -DskipTests package                                        
+COPY *.xml /app/
+COPY src /app/src/
 
-FROM openjdk:11-jre-slim-buster                              
+WORKDIR /app/
+RUN mvn package
 
-COPY --from=build target/fast-maven-builds-1.0.jar .         
+
+From openjdk:8-jre-alpine
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "fast-maven-builds-1.0.jar"] 
+RUN mkdir /app
+COPY --from=MAVEN_BUILD /app/target/*.jar /app/app.jar
+
+ENTRYPOINT ["java","-jar","/app/app.jar"]
